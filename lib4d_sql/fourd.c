@@ -35,10 +35,11 @@
 
 #include "fourd.h"
 #include "fourd_int.h"
+#include "base64.h"
 
 FOURD* fourd_init()
 {
-	int iResult=0;
+	//int iResult=0;
 	FOURD* cnx=calloc(1,sizeof(FOURD));
 
 	cnx->socket = INVALID_SOCKET;
@@ -84,7 +85,7 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 		//strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Error during connection",ERROR_STRING_LENGTH);
 		return 1;
 	}
-	if(login(cnx,1,user,((password==NULL)?"":password),cnx->preferred_image_types)!=0)
+	if(dblogin(cnx,1,user,((password==NULL)?"":password),cnx->preferred_image_types)!=0)
 	{
 		//erreur de login
 		Printferr("Erreur: in login function\n");
@@ -103,7 +104,7 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 }
 int fourd_close(FOURD *cnx)
 {
-	if(logout(cnx,4)!=0)
+	if(dblogout(cnx,4)!=0)
 		return 1;
 	if(quit(cnx,5)!=0)
 		return 1;
@@ -133,7 +134,7 @@ const char * fourd_error(FOURD *cnx)
 }
 int fourd_exec(FOURD *cnx,const char *query)
 {
-	return _query(cnx,3,query,NULL,cnx->preferred_image_types);
+	return _query(cnx,3,query,NULL,cnx->preferred_image_types,100);
 }
 FOURD_RESULT* fourd_query(FOURD *cnx,const char *query)
 {
@@ -141,7 +142,7 @@ FOURD_RESULT* fourd_query(FOURD *cnx,const char *query)
 	
 	result=calloc(1,sizeof(FOURD_RESULT));
 	result->cnx=cnx;
-	if(_query(cnx,3,query,result,cnx->preferred_image_types)==0)
+	if(_query(cnx,3,query,result,cnx->preferred_image_types,100)==0)
 	{
 		result->numRow=-1;
 		return result;
@@ -178,7 +179,7 @@ int fourd_close_statement(FOURD_RESULT *res)
 FOURD_LONG * fourd_field_long(FOURD_RESULT *res,unsigned int numCol)
 {
 	unsigned int nbCol=res->row_type.nbColumn;
-	unsigned int nbRow=res->row_count;
+	//unsigned int nbRow=res->row_count;
 	FOURD_ELEMENT *elmt;
 	unsigned int indexElmt=0;	/*index of element in table <> numRow*nbCol + numCol */
 	//if(res->numRow>=nbRow)	//what can is do in this case...
@@ -186,7 +187,7 @@ FOURD_LONG * fourd_field_long(FOURD_RESULT *res,unsigned int numCol)
 	elmt=&(res->elmt[indexElmt]);
 	if(elmt->null==0)
 	{
-		FOURD_LONG x=*((int *)elmt->pValue);
+		//FOURD_LONG x=*((int *)elmt->pValue);
 		//printf("/////%d//////",x);
 		return (FOURD_LONG *)elmt->pValue;
 	}
@@ -195,7 +196,7 @@ FOURD_LONG * fourd_field_long(FOURD_RESULT *res,unsigned int numCol)
 FOURD_STRING * fourd_field_string(FOURD_RESULT *res,unsigned int numCol)
 {
 	int nbCol=res->row_type.nbColumn;
-	int nbRow=res->row_count;
+	//int nbRow=res->row_count;
 	unsigned int indexElmt=0;	/*index of element in table <> numRow*nbCol + numCol */
 	FOURD_ELEMENT *elmt=NULL;
 	//if(res->numRow>=nbRow)	//what can is do in this case...
@@ -236,7 +237,8 @@ void * fourd_field(FOURD_RESULT *res,unsigned int numCol)
 	}
 	return elmt->pValue;
 }
-int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,int *len)
+
+int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,size_t *len)
 {
 	unsigned int nbCol=res->row_type.nbColumn;
 	unsigned int nbRow=res->row_count;
@@ -329,6 +331,9 @@ int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,int
 			//Varying length
 			return 0;
 			break;
+		default:
+			return 0; //since this is what would happen if it just fell out of the switch statement anyway.
+			break;
 		}
 		return 0;
 	} 
@@ -338,23 +343,25 @@ int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,int
 const char * fourd_get_column_name(FOURD_RESULT *res,unsigned int numCol)
 {
 	unsigned int nbCol=res->row_type.nbColumn;
-	if(numCol>=nbCol  || numCol<0)
+	if(numCol>=nbCol)
 		return "";
 	if(res->row_type.Column==NULL)
 		return "";
 	return res->row_type.Column[numCol].sColumnName;
 }
+
 FOURD_TYPE fourd_get_column_type(FOURD_RESULT *res,unsigned int numCol)
 {
 	unsigned int nbCol=res->row_type.nbColumn;
 	FOURD_TYPE type=VK_UNKNOW;
-	if(numCol>=nbCol  || numCol<0)
+	if(numCol>=nbCol)
 		return 0;
 	if(res->row_type.Column==NULL)
 		return 0;
 	type=res->row_type.Column[numCol].type;
 	return type;
 }
+
 int fourd_num_columns(FOURD_RESULT *res)
 {
 	return res->row_type.nbColumn;
@@ -367,6 +374,7 @@ FOURD_STATEMENT * fourd_prepare_statement(FOURD *cnx,const char *query)
 		return NULL;
 	state=calloc(1,sizeof(FOURD_STATEMENT));
 	state->cnx=cnx;
+	state->query=(char *)malloc(strlen(query)+1);
 
 	/* allocate arbitrarily five elements in this table */
 	state->nbAllocElement=5;
@@ -374,10 +382,51 @@ FOURD_STATEMENT * fourd_prepare_statement(FOURD *cnx,const char *query)
 	state->nb_element=0;
 	
 	/* copy query into statement */
-	sprintf_s(state->query,MAX_HEADER_SIZE,"%s",query);
+	sprintf(state->query,"%s",query);
 	fourd_set_statement_preferred_image_types(state,cnx->preferred_image_types);
+	
+	
+	char *msg;
+	FOURD_RESULT *res=calloc(1,sizeof(FOURD_RESULT));
+	unsigned char *request_b64;
+	int len;
+
+	request_b64=base64_encode(query,strlen(query),&len);
+	char *format_str="003 PREPARE-STATEMENT\r\nSTATEMENT-BASE64:%s\r\n\r\n";
+	unsigned long buff_size=strlen(format_str)+strlen((const char *)request_b64)+2; //add some extra for good measure.
+	msg=(char *)malloc(buff_size);
+	snprintf(msg,buff_size,format_str,request_b64);
+	free(request_b64);
+
+	cnx->updated_row=-1;
+	socket_send(cnx,msg);
+	free(msg);
+	
+	if(receiv_check(cnx,res)!=0)
+		return NULL;
+	
+	switch(res->resultType)	{
+		case UPDATE_COUNT:
+			//get Update-count: Nb row updated
+			cnx->updated_row=-1;
+			//socket_receiv_update_count(cnx,res);
+			_free_data_result(res);
+			break;
+		case RESULT_SET:
+			//get data
+			socket_receiv_data(cnx,res);
+			cnx->updated_row=-1;
+			break;
+		default:
+			Printferr("Error: Result-Type not supported in query");
+	}
+	free(res);
+
+	
 	return state;
 }
+
+
 int fourd_bind_param(FOURD_STATEMENT *state,unsigned int numParam,FOURD_TYPE type, void *val)
 {
 	/* realloc the size of memory if necessary */
@@ -399,12 +448,12 @@ int fourd_bind_param(FOURD_STATEMENT *state,unsigned int numParam,FOURD_TYPE typ
 	}
 	return 0;
 }
-FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state)
+FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state, int res_size)
 {
 	FOURD_RESULT *result=NULL;
 	result=calloc(1,sizeof(FOURD_RESULT));
 	result->cnx=state->cnx;
-	if(_query_param(state->cnx,6,state->query,state->nb_element,state->elmt,result,state->preferred_image_types)==0)
+	if(_query_param(state->cnx,6,state->query,state->nb_element,state->elmt,result,state->preferred_image_types,res_size)==0)
 	{
 		result->numRow=-1;
 		return result;

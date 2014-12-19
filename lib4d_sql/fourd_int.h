@@ -52,11 +52,11 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 /* fourd_interne.c */
 /*******************/
 //return 0 for OK et -1 for no readable header and error_code
-int login(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd,const char*image_type);
-int logout(FOURD *cnx,unsigned short int id_cmd);
+int dblogin(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd,const char*image_type);
+int dblogout(FOURD *cnx,unsigned short int id_cmd);
 int quit(FOURD *cnx,unsigned short int id_cmd);
 //return 0 for OK et -1 for no readable header and error_code
-int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type);
+int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type, int res_size);
 int __fetch_result(FOURD *cnx,unsigned short int id_cmd,int statement_id,int command_index,unsigned int first_row,unsigned int last_row,FOURD_RESULT *result);
 int _fetch_result(FOURD_RESULT *res,unsigned short int id_cmd);
 int get(const char* msg,const char* section,char *valeur,int max_length);
@@ -70,14 +70,14 @@ void _free_data_result(FOURD_RESULT *res);
 void _clear_atrr_cnx(FOURD *cnx);
 int close_statement(FOURD_RESULT *res,unsigned short int id_cmd);
 
-int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type); 
+int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type, int res_size);
 int _is_multi_query(const char *request);
 int _valid_query(FOURD *cnx,const char *request);
 /*********************/
 /* Memory Allocation */
 /*********************/
 void *_copy(FOURD_TYPE type,void *org);
-char *_serialize(char *data,int *size, FOURD_TYPE type, void *pObj);
+char *_serialize(char *data,unsigned int *size, FOURD_TYPE type, void *pObj);
 void Free(void *p);
 void FreeFloat(FOURD_FLOAT *p);
 void FreeString(FOURD_STRING *p);
@@ -89,8 +89,8 @@ void PrintData(const void *data,unsigned int size);
 #define strtok_s(a,b,c) strtok(a,b)
 #define strcpy_s(s,size,cs) strncpy(s,cs,size)
 #define strncpy_s(s,ms,cs,size) strncpy(s,cs,size)
-	int sprintf_s(char *buff,int size,const char* format,...);
-	int _snprintf_s(char *buff, int size, int count, const char *format,...);
+	int sprintf_s(char *buff,size_t size,const char* format,...);
+	int _snprintf_s(char *buff, size_t size, size_t count, const char *format,...);
 #endif
 
 
