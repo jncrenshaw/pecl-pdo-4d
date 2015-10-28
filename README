@@ -15,8 +15,6 @@ To compile your new extension, you will have to execute the following steps:
 5.  $ make test
 6.  $ [sudo] make install
 
-
-
 BUILDING ON WINDOWS
 ===================
 
