@@ -86,7 +86,7 @@ int socket_connect(FOURD *cnx,const char *host,unsigned int port)
 	if ( iResult != 0 ) {
 		Printf("getaddrinfo failed: %d : %s\n", iResult,gai_strerror(iResult));
 		cnx->error_code=-iResult;
-		strncpy_s(cnx->error_string,2048,gai_strerror(iResult),2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,gai_strerror(iResult),ERROR_STRING_LENGTH);
 		return 1;
 	}
 	//Printf("getaddrinfo ok\n");
@@ -101,7 +101,7 @@ int socket_connect(FOURD *cnx,const char *host,unsigned int port)
 	if (cnx->socket == INVALID_SOCKET) {
 		Printf("Error at socket(): %ld\n", WSAGetLastError());
 		cnx->error_code=-WSAGetLastError();
-		strncpy_s(cnx->error_string,2048,"Unable to create socket",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Unable to create socket",ERROR_STRING_LENGTH);
 		freeaddrinfo(result);
 		return 1;
 	}
@@ -111,7 +111,7 @@ int socket_connect(FOURD *cnx,const char *host,unsigned int port)
 	if (iResult == SOCKET_ERROR) {
 		Printf("Error at socket(): %ld\n", WSAGetLastError());
 		cnx->error_code=-WSAGetLastError();
-		strncpy_s(cnx->error_string,2048,"Unable to connect to server",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Unable to connect to server",ERROR_STRING_LENGTH);
 		freeaddrinfo(result);
 		closesocket(cnx->socket);
 		cnx->socket = INVALID_SOCKET;
@@ -132,7 +132,7 @@ int socket_connect(FOURD *cnx,const char *host,unsigned int port)
 	if (cnx->socket == INVALID_SOCKET) {
 		Printf("Unable to connect to server!\n");
 		cnx->error_code=-1;
-		strncpy_s(cnx->error_string,2048,"Unable to connect to server",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Unable to connect to server",ERROR_STRING_LENGTH);
 		return 1;
 	}
 	//Printf("fin de la fonction\n");
@@ -232,7 +232,7 @@ int socket_receiv_data(FOURD *cnx,FOURD_RESULT *state)
 	unsigned int nbCol=state->row_type.nbColumn;
 	unsigned int nbRow=state->row_count_sent;
 	unsigned int r,c;
-	FOURD_TYPE *colType;
+	FOURD_TYPE *colType=NULL;
 	FOURD_ELEMENT *pElmt=NULL;
 	char status_code=0;
 	int elmt_size=0;
@@ -519,7 +519,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 	if ( iResult != 0 ) {
 		Printf("getaddrinfo failed: %d : %s\n", iResult,gai_strerror(iResult));
 		cnx->error_code=-iResult;
-		strncpy_s(cnx->error_string,2048,gai_strerror(iResult),2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,gai_strerror(iResult),ERROR_STRING_LENGTH);
 		return 1;
 	}
 	/* Printf("getaddrinfo ok\n"); */
@@ -534,7 +534,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 	if (cnx->socket == INVALID_SOCKET) {
 		Printf("Error at socket(): %ld\n", WSAGetLastError());
 		cnx->error_code=-WSAGetLastError();
-		strncpy_s(cnx->error_string,2048,"Unable to create socket",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Unable to create socket",ERROR_STRING_LENGTH);
 		freeaddrinfo(result);
 		return 1;
 	}
@@ -555,7 +555,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 					if (valopt) { 
 						fprintf(stderr, "Error in connection() %d - %s\n", valopt, strerror(valopt));
 						cnx->error_code=valopt;
-						strncpy_s(cnx->error_string,2048,strerror(valopt),2048);
+						strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,strerror(valopt),ERROR_STRING_LENGTH);
 						freeaddrinfo(result);
 						closesocket(cnx->socket);
 						cnx->socket = INVALID_SOCKET;
@@ -566,7 +566,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
         else { 
 			/*fprintf(stderr, "Timeout or error() %d - %s\n", valopt, strerror(valopt)); */
 			cnx->error_code=3011;
-			strncpy_s(cnx->error_string,2048,"Connect timed out",2048);
+			strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Connect timed out",ERROR_STRING_LENGTH);
 			freeaddrinfo(result);
 			closesocket(cnx->socket);
 			cnx->socket = INVALID_SOCKET;
@@ -576,7 +576,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
      else { 
         /*fprintf(stderr, "Error connecting %d - %s\n", errno, strerror(errno)); */
         cnx->error_code=-WSAGetLastError();
-			strncpy_s(cnx->error_string,2048,"Error connecting",2048);
+			strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Error connecting",ERROR_STRING_LENGTH);
 			freeaddrinfo(result);
 			closesocket(cnx->socket);
 			cnx->socket = INVALID_SOCKET;
@@ -603,7 +603,7 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 	if (cnx->socket == INVALID_SOCKET) {
 		Printf("Unable to connect to server!\n");
 		cnx->error_code=-1;
-		strncpy_s(cnx->error_string,2048,"Unable to connect to server",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Unable to connect to server",ERROR_STRING_LENGTH);
 		return 1;
 	}
 	/* Printf("fin de la fonction\n"); */

@@ -64,7 +64,7 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 		//not init
 		Printferr("Erreur: FOURD object did not initialised\n");
 		cnx->error_code=-1;
-		strncpy_s(cnx->error_string,2048,"FOURD object did not initialised",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"FOURD object did not initialised",ERROR_STRING_LENGTH);
 		return 1;
 	}
 	if(cnx->connected)
@@ -72,7 +72,7 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 		//deja connecter
 		Printferr("Erreur: already connected\n");
 		cnx->error_code=-1;
-		strncpy_s(cnx->error_string,2048,"Already connected",2048);
+		strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Already connected",ERROR_STRING_LENGTH);
 		return 1;
 	}
 	if(socket_connect_timeout(cnx,host,port,15))
@@ -81,7 +81,7 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 		Printferr("Erreur in socket_connect\n");
 		cnx->connected=0;
 		//cnx->error_code=-1;
-		//strncpy_s(cnx->error_string,2048,"Error during connection",2048);
+		//strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Error during connection",ERROR_STRING_LENGTH);
 		return 1;
 	}
 	if(login(cnx,1,user,((password==NULL)?"":password),cnx->preferred_image_types)!=0)
@@ -91,14 +91,14 @@ int fourd_connect(FOURD *cnx,const char *host,const char *user,const char *passw
 		cnx->connected=0;
 		if(cnx->error_code==0) {
 			cnx->error_code=-1;
-			strncpy_s(cnx->error_string,2048,"Error during login",2048);
+			strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"Error during login",ERROR_STRING_LENGTH);
 		}
 		return 1;
 	}
 	cnx->connected=1;
 	//Printferr("Erreur: not erreur\n");
 	cnx->error_code=0;
-	strncpy_s(cnx->error_string,2048,"",2048);
+	strncpy_s(cnx->error_string,ERROR_STRING_LENGTH,"",ERROR_STRING_LENGTH);
 	return 0;
 }
 int fourd_close(FOURD *cnx)
@@ -220,12 +220,12 @@ void * fourd_field(FOURD_RESULT *res,unsigned int numCol)
 
 	if(res->numRow>=nbRow){	
 		res->cnx->error_code=-1;
-		sprintf_s(res->cnx->error_string,2048,"num Row out of bounds",2048);
+		sprintf_s(res->cnx->error_string,ERROR_STRING_LENGTH,"num Row out of bounds",ERROR_STRING_LENGTH);
 		return NULL;
 	}
 	if(numCol>=nbCol){
 		res->cnx->error_code=-1;
-		sprintf_s(res->cnx->error_string,2048,"num Column out of bounds",2048);
+		sprintf_s(res->cnx->error_string,ERROR_STRING_LENGTH,"num Column out of bounds",ERROR_STRING_LENGTH);
 		return NULL;
 	}
 	indexElmt=(res->numRow-res->first_row)*nbCol+numCol;
@@ -246,14 +246,14 @@ int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,int
 		*value=NULL;
 		*len=0;
 		res->cnx->error_code=-1;
-		sprintf_s(res->cnx->error_string,2048,"num Row out of bounds",2048);
+		sprintf_s(res->cnx->error_string,ERROR_STRING_LENGTH,"num Row out of bounds",ERROR_STRING_LENGTH);
 		return 0;
 	}
 	if(numCol>=nbCol){
 		*value=NULL;
 		*len=0;
 		res->cnx->error_code=-1;
-		sprintf_s(res->cnx->error_string,2048,"num Column out of bounds",2048);
+		sprintf_s(res->cnx->error_string,ERROR_STRING_LENGTH,"num Column out of bounds",ERROR_STRING_LENGTH);
 		return 0;
 	}
 	indexElmt=(res->numRow-res->first_row)*nbCol+numCol;

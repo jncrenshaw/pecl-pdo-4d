@@ -84,7 +84,7 @@ int _snprintf(char *buff, int size, const char *format,...)
 #endif
 int login(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd,const char*image_type)
 {
-	char msg[2048];
+	char msg[MAX_HEADER_SIZE];
 	FOURD_RESULT state;
 	char *user_b64=NULL,*pwd_b64=NULL;
 	int len;
@@ -92,11 +92,11 @@ int login(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd,c
 #if __LOGIN_BASE64__
 	user_b64=base64_encode(user,strlen(user),&len);
 	pwd_b64=base64_encode(pwd,strlen(pwd),&len);
-	sprintf_s(msg,2048,"%03d LOGIN \r\nUSER-NAME-BASE64:%s\r\nUSER-PASSWORD-BASE64:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nREPLY-WITH-BASE64-TEXT:Y\r\nPROTOCOL-VERSION:0.1a\r\n\r\n",id_cnx,user_b64,pwd_b64,image_type);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d LOGIN \r\nUSER-NAME-BASE64:%s\r\nUSER-PASSWORD-BASE64:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nREPLY-WITH-BASE64-TEXT:Y\r\nPROTOCOL-VERSION:0.1a\r\n\r\n",id_cnx,user_b64,pwd_b64,image_type);
 	free(user_b64);
 	free(pwd_b64);
 #else
-	sprintf_s(msg,2048,"%03d LOGIN \r\nUSER-NAME:%s\r\nUSER-PASSWORD:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nREPLY-WITH-BASE64-TEXT:Y\r\nPROTOCOL-VERSION:0.1a\r\n\r\n",id_cnx,user,pwd,image_type);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d LOGIN \r\nUSER-NAME:%s\r\nUSER-PASSWORD:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nREPLY-WITH-BASE64-TEXT:Y\r\nPROTOCOL-VERSION:0.1a\r\n\r\n",id_cnx,user,pwd,image_type);
 #endif
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,&state)!=0)
@@ -122,10 +122,10 @@ int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT
 		res=calloc(1,sizeof(FOURD_RESULT));
 #if __STATEMENT_BASE64__
 	request_b64=base64_encode(request,strlen(request),&len);
-	sprintf_s(msg,2048,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type);
 	free(request_b64);
 #else
-	sprintf_s(msg,2048,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request,"release",image_type);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request,"release",image_type);
 #endif
 	cnx->updated_row=-1;
 	socket_send(cnx,msg);
@@ -204,7 +204,7 @@ int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsig
 	/* construct Header */
 #if __STATEMENT_BASE64__
 	request_b64=base64_encode(request,strlen(request),&len);
-	sprintf_s(msg,2048,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type,sParam);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type,sParam);
 	free(request_b64);
 #else
 	sprintf_s(msg,MAX_HEADER_SIZE-1,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n",id_cmd,request,"release",image_type,sParam);
@@ -243,7 +243,7 @@ int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsig
    command_index and statement_id is identify by result of execute statement commande */
 int __fetch_result(FOURD *cnx,unsigned short int id_cmd,int statement_id,int command_index,unsigned int first_row,unsigned int last_row,FOURD_RESULT *result)
 {
-	char msg[2048];
+	char msg[MAX_HEADER_SIZE];
 	
 	
 	_clear_atrr_cnx(cnx);
@@ -251,7 +251,7 @@ int __fetch_result(FOURD *cnx,unsigned short int id_cmd,int statement_id,int com
 	if(result==NULL) {
 		return 0;
 	}
-	sprintf_s(msg,2048,"%03d FETCH-RESULT\r\nSTATEMENT-ID:%d\r\nCOMMAND-INDEX:%03d\r\nFIRST-ROW-INDEX:%d\r\nLAST-ROW-INDEX:%d\r\nOutput-Mode:%s\r\n\r\n",id_cmd,statement_id,command_index,first_row,last_row,"release");
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d FETCH-RESULT\r\nSTATEMENT-ID:%d\r\nCOMMAND-INDEX:%03d\r\nFIRST-ROW-INDEX:%d\r\nLAST-ROW-INDEX:%d\r\nOutput-Mode:%s\r\n\r\n",id_cmd,statement_id,command_index,first_row,last_row,"release");
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,result)!=0)
 		return 1;
@@ -304,7 +304,7 @@ int _fetch_result(FOURD_RESULT *res,unsigned short int id_cmd)
 }
 int close_statement(FOURD_RESULT *res,unsigned short int id_cmd)
 {
-	char msg[2048];	
+	char msg[MAX_HEADER_SIZE];
 	FOURD *cnx=NULL;
 	FOURD_RESULT state;
 
@@ -312,7 +312,7 @@ int close_statement(FOURD_RESULT *res,unsigned short int id_cmd)
 		return 0;
 	cnx=res->cnx;
 	_clear_atrr_cnx(cnx);
-	sprintf_s(msg,2048,"%03d CLOSE-STATEMENT\r\nSTATEMENT-ID:%d\r\n\r\n",id_cmd,res->id_statement);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d CLOSE-STATEMENT\r\nSTATEMENT-ID:%d\r\n\r\n",id_cmd,res->id_statement);
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,&state)!=0) {
 		return 1;
@@ -322,10 +322,10 @@ int close_statement(FOURD_RESULT *res,unsigned short int id_cmd)
 //return 0 if ok 1 if error
 int logout(FOURD *cnx,unsigned short int id_cmd)
 {
-	char msg[2048];
+	char msg[MAX_HEADER_SIZE];
 	FOURD_RESULT state;
 	_clear_atrr_cnx(cnx);
-	sprintf_s(msg,2048,"%03d LOGOUT\r\n\r\n",id_cmd);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d LOGOUT\r\n\r\n",id_cmd);
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,&state)!=0) {
 		return 1;
@@ -334,10 +334,10 @@ int logout(FOURD *cnx,unsigned short int id_cmd)
 }
 int quit(FOURD *cnx,unsigned short int id_cmd)
 {
-	char msg[2048];
+	char msg[MAX_HEADER_SIZE];
 	FOURD_RESULT state;
 	_clear_atrr_cnx(cnx);
-	sprintf_s(msg,2048,"%03d QUIT\r\n\r\n",id_cmd);
+	sprintf_s(msg,MAX_HEADER_SIZE,"%03d QUIT\r\n\r\n",id_cmd);
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,&state)!=0) {
 		return 1;
@@ -478,11 +478,11 @@ int traite_header_response(FOURD_RESULT* state)
 	}
 	//get Column-Types
 	{
-		char column_type[2048];
+		char column_type[MAX_HEADER_SIZE];
 		char *column=NULL;
 		unsigned int num=0;
 		char *context=NULL;
-		if(get(header,"Column-Types",column_type,2048)==0) {
+		if(get(header,"Column-Types",column_type,MAX_HEADER_SIZE)==0) {
 			Printf("Column-Types => '%s'\n",column_type);
 			column = strtok_s(column_type, " ",&context);
 			if(column!=NULL)
@@ -503,11 +503,11 @@ int traite_header_response(FOURD_RESULT* state)
 	}
 	//get Column-Aliases-Base64
 	{
-		char column_alias[2048];
+		char column_alias[MAX_HEADER_SIZE];
 		char *alias=NULL;
 		unsigned int num=0;
 		char *context=NULL;
-		if(get(header,"Column-Aliases-Base64",column_alias,2048)==0) {
+		if(get(header,"Column-Aliases-Base64",column_alias,MAX_HEADER_SIZE)==0) {
 			/* delete the last espace char if exist */
 			if(column_alias[strlen(column_alias)-1]==' ') {
 				column_alias[strlen(column_alias)-1]=0;
@@ -931,7 +931,7 @@ int _valid_query(FOURD *cnx,const char *request)
 {
 	if(_is_multi_query(request)){
 		cnx->error_code=-5001;
-		sprintf_s(cnx->error_string,2048,"MultiQuery not supported",2048);
+		sprintf_s(cnx->error_string,ERROR_STRING_LENGTH,"MultiQuery not supported",ERROR_STRING_LENGTH);
 		return 0;
 	}
 	return 1;
