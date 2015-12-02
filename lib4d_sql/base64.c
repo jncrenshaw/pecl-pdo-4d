@@ -56,9 +56,9 @@ static const short base64_reverse_table[256] = {
 
 /* {{{ php_base64_encode */
 //PHPAPI 
-unsigned char *base64_encode(const char *str, size_t length, int *ret_length)
+unsigned char *base64_encode(const unsigned char *str, size_t length, int *ret_length)
 {
-	const char *current = str;
+	const unsigned char *current = str;
 	unsigned char *p;
 	unsigned char *result;
 
@@ -138,7 +138,7 @@ void php_base64_init(void)
 /* }}} */
 
 //PHPAPI 
-unsigned char *base64_decode(const char *str, size_t length, int *ret_length)
+unsigned char *base64_decode(const unsigned char *str, size_t length, int *ret_length)
 {
 	return base64_decode_ex(str, length, ret_length, 0);
 }
@@ -146,9 +146,9 @@ unsigned char *base64_decode(const char *str, size_t length, int *ret_length)
 /* {{{ php_base64_decode */
 /* as above, but backwards. :) */
 //PHPAPI 
-unsigned char *base64_decode_ex(const char *str, size_t length, int *ret_length, int strict)
+unsigned char *base64_decode_ex(const unsigned char *str, size_t length, int *ret_length, int strict)
 {
-	const char *current = str;
+	const unsigned char *current = str;
 	int ch, i = 0, j = 0, k;
 	/* this sucks for threaded environments */
 	unsigned char *result;
@@ -164,7 +164,7 @@ unsigned char *base64_decode_ex(const char *str, size_t length, int *ret_length,
 			continue;
 		} else if (ch == -2) {
 			free(result);
-            result=NULL;
+			result=NULL;
 			return NULL;
 		}
 
@@ -193,7 +193,7 @@ unsigned char *base64_decode_ex(const char *str, size_t length, int *ret_length,
 		switch(i % 4) {
 		case 1:
 			free(result);
-            result=NULL;
+			result=NULL;
 			return NULL;
 		case 2:
 			k++;
