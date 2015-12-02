@@ -63,7 +63,7 @@ typedef struct in_addr IN_ADDR;
 #define BUFFER_LENGTH 131072
 #define ERROR_STRING_LENGTH 2048
 
-#define MAX_HEADER_SIZE 8192 
+#define MAX_HEADER_SIZE 1048576 
 #define DEFAULT_IMAGE_TYPE "jpg"
 #define MAX_LENGTH_COLUMN_NAME 255
 
