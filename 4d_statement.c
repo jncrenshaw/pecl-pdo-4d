@@ -45,6 +45,7 @@ static int pdo_4d_stmt_execute(pdo_stmt_t *stmt TSRMLS_DC)
 	pdo_4d_stmt *S;
 	pdo_4d_db_handle *H;
 	FOURD_LONG8 row_count;
+	int page_size=999999;
 	S = (pdo_4d_stmt*)stmt->driver_data;
 	H = S->H;
 	if (S->result) {
@@ -58,7 +59,7 @@ static int pdo_4d_stmt_execute(pdo_stmt_t *stmt TSRMLS_DC)
 		}
 	}
 	else {	/* if statement has prepared */
-		if ((S->result=fourd_exec_statement(S->state)) ==NULL) {
+		if ((S->result=fourd_exec_statement(S->state, page_size)) ==NULL) {
 			pdo_4d_error_stmt(stmt);
 			return 0;
 		}
