@@ -142,6 +142,7 @@ int socket_connect(FOURD *cnx,const char *host,unsigned int port)
 
 void socket_disconnect(FOURD *cnx)
 {
+	long iResult=0;
 	// shutdown the send half of the connection since no more data will be sent
 	#ifdef WIN32
 	iResult = shutdown(cnx->socket, SD_SEND);
@@ -193,6 +194,7 @@ int socket_receiv_header(FOURD *cnx,FOURD_RESULT *state)
 	int offset=0;
 	int len=0;
 	int crlf=0;
+	char *fin_header=NULL;
 	//read the HEADER only
 	do 
 	{
@@ -226,14 +228,14 @@ int socket_receiv_data(FOURD *cnx,FOURD_RESULT *state)
 {
 	long iResult=0;
 	int len=0;
-	//int end_row=0;
+	int end_row=0;
 	unsigned int nbCol=state->row_type.nbColumn;
 	unsigned int nbRow=state->row_count_sent;
 	unsigned int r,c;
 	FOURD_TYPE *colType=NULL;
 	FOURD_ELEMENT *pElmt=NULL;
 	unsigned char status_code=0;
-	//int elmt_size=0;
+	int elmt_size=0;
 	int elmts_offset=0;
 	Printf("---Debut de socket_receiv_data\n");
 	colType=calloc(nbCol,sizeof(FOURD_TYPE));
@@ -537,10 +539,6 @@ int socket_connect_timeout(FOURD *cnx,const char *host,unsigned int port,int tim
 		freeaddrinfo(result);
 		return 1;
 	}
-	int flag=1;
-	// if we get an error here, we can safely ignore it. The connection may be slower, but it should
-	// still work.
-	setsockopt(cnx->socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
 	
 	/* Printf("Socket Ok\n"); */
 	/*set Non blocking socket */
