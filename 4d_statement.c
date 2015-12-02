@@ -45,7 +45,7 @@ static int pdo_4d_stmt_execute(pdo_stmt_t *stmt TSRMLS_DC)
 	pdo_4d_stmt *S;
 	pdo_4d_db_handle *H;
 	FOURD_LONG8 row_count;
-	int page_size=999999;
+	unsigned int page_size=65535;
 	S = (pdo_4d_stmt*)stmt->driver_data;
 	H = S->H;
 	if (S->result) {
