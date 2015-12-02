@@ -333,7 +333,6 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 							}
 							{
 								FOURD_BLOB str;
-								int len=0;
 								str.length=Z_STRLEN_P(param->parameter);	
 								str.data=Z_STRVAL_P(param->parameter);
 								fourd_bind_param(S->state,param->paramno,VK_BLOB, &str);
@@ -370,7 +369,7 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 							default:
 								{
 									FOURD_STRING str;
-									int len=0;
+									size_t len=0;
 									char* val=NULL;
 									convert_to_string(param->parameter);
 									val=php_mb_convert_encoding(Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len TSRMLS_CC);
