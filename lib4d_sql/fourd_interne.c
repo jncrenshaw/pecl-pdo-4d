@@ -126,13 +126,13 @@ int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT
 #if __STATEMENT_BASE64__
 	request_b64=base64_encode(request,strlen(request),&len);
 	char *format_str="%03d EXECUTE-STATEMENT\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n";
-	size_t buff_size=strlen(format_str)+strlen((const char *)request_b64)+42; //add some extra for the additional arguments and a bit more for good measure.
+	size_t buff_size=strlen(format_str)+strlen((const char *)request_b64)+256; //add a lot extra for the additional arguments and a bit more for good measure.
 	msg=(char *)malloc(buff_size);
 	snprintf(msg,buff_size,format_str,id_cmd,request_b64,"release",res_size,image_type);
 	free(request_b64);
 #else
 	char *format_str="%03d EXECUTE-STATEMENT\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n";
-	size_t buff_size=strlen(format_str)+strlen(request)+42; //add some extra for the additional arguments and a bit more for good measure.
+	size_t buff_size=strlen(format_str)+strlen(request)+256; //add a lot extra for the additional arguments and a bit more for good measure.
 	msg=(char *)malloc(buff_size);
 	snprintf(msg, buff_size,format_str,id_cmd,request,"release",res_size,image_type);
 #endif
@@ -179,16 +179,16 @@ int _prepare_statement(FOURD *cnx,unsigned short int id_cmd,const char *request)
 #if __STATEMENT_BASE64__
 	unsigned char *request_b64;
 	request_b64=base64_encode(request,strlen(request),&len);
-	char *format_str="%03d PREPARE-STATEMENT\r\nSTATEMENT-BASE64: %s\r\n\r\n";
-	unsigned long buff_size=strlen(format_str)+strlen((const char *)request_b64)+2; //add some extra for good measure.
+	char *format_str="%03d PREPARE-STATEMENT\r\nSTATEMENT-BASE64:%s\r\n\r\n";
+	unsigned long buff_size=strlen(format_str)+strlen((const char *)request_b64)+256; //add a lot extra for good measure.
 	msg=(char *)malloc(buff_size);
 	snprintf(msg,buff_size,format_str,id_cmd,request_b64);
 	free(request_b64);
 #else
-	char *format_str="%03d PREPARE-STATEMENT\r\nSTATEMENT: %s\r\n\r\n";
-	unsigned long buff_size=strlen(format_str)+strlen(request)+2; //add some extra for good measure.
+	char *format_str="%03d PREPARE-STATEMENT\r\nSTATEMENT:%s\r\n\r\n";
+	unsigned long buff_size=strlen(format_str)+strlen(request)+256; //add a lot extra for good measure.
 	msg=(char *)malloc(buff_size);
-	snprintf(msg,buff_size,format_str,id_cmd,request_b64);
+	snprintf(msg,buff_size,format_str,id_cmd,request);
 #endif
 	
 	cnx->updated_row=-1;
