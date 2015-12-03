@@ -389,12 +389,12 @@ FOURD_STATEMENT * fourd_prepare_statement(FOURD *cnx,const char *query)
 	if(cnx==NULL || !cnx->connected || query==NULL)
 		return NULL;
 	
-	if(_prepare_statement(cnx, 3, query)!=0)
+	/*if(_prepare_statement(cnx, 3, query)!=0)
 		return NULL;
-	
+	*/
 	state=calloc(1,sizeof(FOURD_STATEMENT));
 	state->cnx=cnx;
-	state->query=(char *)malloc(strlen(query)+1);
+	/*state->query=(char *)malloc(strlen(query)+1);*/
 
 	/* allocate arbitrarily five elements in this table */
 	state->nbAllocElement=5;
