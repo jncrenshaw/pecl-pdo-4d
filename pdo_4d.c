@@ -22,7 +22,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id$ */ 
+/* $Id$ */
 
 #include "php_pdo_4d.h"
 #include "php_pdo_4d_int.h"
@@ -155,12 +155,13 @@ PHP_MINFO_FUNCTION(pdo_4d)
     php_info_print_table_header(2, "PDO Driver for 4D" , "enabled");
     php_info_print_table_row(2, "Version", "0.3");
     php_info_print_table_row(2, "Status", "Beta");
-    php_info_print_table_row(2, "Build Date", "$Date$");
+    php_info_print_table_row(2, "Build Date", "$Date: " __DATE__ " " __TIME__ "$");
     php_info_print_table_row(2, "Core library", "lib4d_sql 0.3 (http://freshmeat.net/projects/lib4d_sql)");
-    php_info_print_table_row(2, "Provided by ", 
-        "4D (http://www.4d.com), and " 
+    php_info_print_table_row(2, "Provided by ",
+        "4D (http://www.4d.com), and "
         "Alter Way (http://www.alterway.fr)"
     );
+
     php_info_print_table_row(2, "Maintainers", 
         "Alexandre Morgaut (lead), " 
         "Stephane Planquart (developer)"

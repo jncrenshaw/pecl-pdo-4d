@@ -25,7 +25,7 @@
   +----------------------------------------------------------------------+
 */
 
-/* $ Id: $ */ 
+/* $ Id: $ */
 
 #include "php_pdo_4d.h"
 
@@ -47,10 +47,10 @@
 int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line TSRMLS_DC) /* {{{ */
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
-	pdo_error_type *pdo_err; 
+	pdo_error_type *pdo_err;
 	pdo_4d_error_info *einfo;
 	pdo_4d_stmt *S = NULL;
-	
+
 	if (stmt) {
 		S = (pdo_4d_stmt*)stmt->driver_data;
 		pdo_err = &stmt->error_code;
@@ -59,13 +59,13 @@ int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line T
 		pdo_err = &dbh->error_code;
 		einfo   = &H->einfo;
 	}
-	
+
 	//pdo_err = &dbh->error_code;
 	//einfo   = &H->einfo;
 	einfo->errcode = fourd_errno(H->server);
 	einfo->file = file;
 	einfo->line = line;
-	
+
 	/* free memory of last error message */
 	if (einfo->errmsg) {
 		pefree(einfo->errmsg, dbh->is_persistent);
@@ -87,7 +87,7 @@ int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line T
 		zend_throw_exception_ex(php_pdo_get_exception(), 0 TSRMLS_CC, "SQLSTATE[%s] [%d] %s",
 				*pdo_err, einfo->errcode, einfo->errmsg);
 	}
-	
+
 	return einfo->errcode;
 }
 static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info TSRMLS_DC)
@@ -104,7 +104,11 @@ static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info 
 
 	if (einfo->errcode) {
 		add_next_index_long(info, einfo->errcode);
+#if PHP_VERSION_ID >= 70000
+		add_next_index_string(info, einfo->errmsg);
+#else
 		add_next_index_string(info, einfo->errmsg, 1);
+#endif
 	}
 
 	return 1;
@@ -112,7 +116,7 @@ static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info 
 static int fourd_handle_closer(pdo_dbh_t *dbh TSRMLS_DC) /* {{{ */
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
-	
+
 	if (H) {
 		if (H->server) {
 			fourd_close(H->server);
@@ -148,9 +152,9 @@ static long fourd_handle_doer(pdo_dbh_t *dbh, const char *sql, long sql_len TSRM
 static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, pdo_stmt_t *stmt, zval *driver_options TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
-	pdo_4d_stmt *S = ecalloc(1, sizeof(pdo_4d_stmt));	
+	pdo_4d_stmt *S = ecalloc(1, sizeof(pdo_4d_stmt));
 	char *nsql = NULL;
-	int nsql_len = 0;
+	long unsigned int nsql_len = 0;
 	int ret;
 	S->H = H;
 	stmt->driver_data = S;
@@ -160,11 +164,11 @@ static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, 
 		printf("*** emulate_prepare ***\n");
 		goto end;
 	}*/
-	
-	/* prepare statement */	
+
+	/* prepare statement */
 	stmt->supports_placeholders = PDO_PLACEHOLDER_POSITIONAL;
-	
-	ret = pdo_parse_params(stmt, (char*)sql, sql_len, &nsql, &nsql_len TSRMLS_CC); 
+
+	ret = pdo_parse_params(stmt, (char*)sql, sql_len, &nsql, &nsql_len TSRMLS_CC);
 	if (ret == 1) {
 		/* query was rewritten */
 		sql = nsql;
@@ -181,15 +185,15 @@ static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, 
 		pdo_4d_error(dbh);
 		/*printf("Error sur prepare (%d):%s\n",fourd_errno(cnx),fourd_error(cnx));*/
 	}
-	
+
 	if (nsql) {
 		efree(nsql);
 	}
 	return 1;
 	/* end of prepare statement */
-end:
+	end:
 	stmt->supports_placeholders = PDO_PLACEHOLDER_NONE;
-	
+
 	return 1;
 }
 
@@ -197,14 +201,14 @@ static int pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	switch (attr) {
-	case PDO_FOURD_ATTR_CHARSET:
-		((pdo_4d_db_handle *)dbh->driver_data)->charset = pestrdup(Z_STRVAL_P(val), dbh->is_persistent);
-		return 1;
-	case PDO_FOURD_ATTR_PREFERRED_IMAGE_TYPES:
+		case PDO_FOURD_ATTR_CHARSET:
+			((pdo_4d_db_handle *)dbh->driver_data)->charset = pestrdup(Z_STRVAL_P(val), dbh->is_persistent);
+			return 1;
+		case PDO_FOURD_ATTR_PREFERRED_IMAGE_TYPES:
 			fourd_set_preferred_image_types(H->server,Z_STRVAL_P(val));
-		return 1;
-	default:
-		return 0;
+			return 1;
+		default:
+			return 0;
 	}
 }
 static int fourd_handle_begin(pdo_dbh_t *dbh TSRMLS_DC)
@@ -220,7 +224,7 @@ static int fourd_handle_commit(pdo_dbh_t *dbh TSRMLS_DC)
 static int fourd_handle_rollback(pdo_dbh_t *dbh TSRMLS_DC)
 {
 	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("ROLLBACK") TSRMLS_CC);
-} 
+}
 
 static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value TSRMLS_DC)
 {
@@ -228,13 +232,23 @@ static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value TS
 
 	switch (attr) {
 		case PDO_FOURD_ATTR_CHARSET:
+#if PHP_VERSION_ID >= 70000
+			ZVAL_STRING(return_value, H->charset);
+#else
 			ZVAL_STRING(return_value, H->charset, 1);
+#endif
 			break;
 		case PDO_FOURD_ATTR_PREFERRED_IMAGE_TYPES:
-			ZVAL_STRING(return_value, fourd_get_preferred_image_types(H->server), 1);			
+			//ZVAL_STRING(return_value, fourd_get_preferred_image_types(H->server), 1);
+
+#if PHP_VERSION_ID >= 70000
+			ZVAL_STRING(return_value, H->charset);
+#else
+			ZVAL_STRING(return_value, H->charset, 1);
+#endif
 			break;
 		default:
-			return 0;	
+			return 0;
 	}
 
 	return 1;
@@ -259,36 +273,36 @@ static int fourd_handle_quoter(pdo_dbh_t *dbh, const char *unquoted, int unquote
 	*quotedlen = unquotedlen + qcount + 2;
 	*quoted = c = emalloc(*quotedlen+1);
 	*c++ = '\'';
-	
+
 	/* foreach (chunk that ends in a quote) */
 	for (l = unquoted; (r = strchr(l,'\'')); l = r+1) {
 		strncpy(c, l, r-l+1);
-		c += (r-l+1);		
+		c += (r-l+1);
 		*c++ = '\'';			/* add second quote */
 	}
 
-    /* Copy remainder and add enclosing quote */	
+	/* Copy remainder and add enclosing quote */
 	strncpy(c, l, *quotedlen-(c-*quoted)-1);
-	(*quoted)[*quotedlen-1] = '\''; 
+	(*quoted)[*quotedlen-1] = '\'';
 	(*quoted)[*quotedlen]   = '\0';
-	
+
 	return 1;
 }
 /* }}} */
 
 static struct pdo_dbh_methods fourd_methods = {
-	fourd_handle_closer,				//mysql_handle_closer,
-	fourd_handle_preparer,				//mysql_handle_preparer,
-	fourd_handle_doer,				//mysql_handle_doer,
-	fourd_handle_quoter,				//mysql_handle_quoter,
-	fourd_handle_begin,				//mysql_handle_begin,
-	fourd_handle_commit,				//mysql_handle_commit,
-	fourd_handle_rollback,				//mysql_handle_rollback,
-	pdo_4d_set_attribute,				//pdo_mysql_set_attribute,
-	NULL,				//pdo_mysql_last_insert_id,
-	pdo_4d_fetch_error_func,				//pdo_mysql_fetch_error_func,
-	pdo_4d_get_attribute,				//pdo_mysql_get_attribute,
-	NULL				//pdo_mysql_check_liveness
+		fourd_handle_closer,				//mysql_handle_closer,
+		fourd_handle_preparer,				//mysql_handle_preparer,
+		fourd_handle_doer,				//mysql_handle_doer,
+		fourd_handle_quoter,				//mysql_handle_quoter,
+		fourd_handle_begin,				//mysql_handle_begin,
+		fourd_handle_commit,				//mysql_handle_commit,
+		fourd_handle_rollback,				//mysql_handle_rollback,
+		pdo_4d_set_attribute,				//pdo_mysql_set_attribute,
+		NULL,				//pdo_mysql_last_insert_id,
+		pdo_4d_fetch_error_func,				//pdo_mysql_fetch_error_func,
+		pdo_4d_get_attribute,				//pdo_mysql_get_attribute,
+		NULL				//pdo_mysql_check_liveness
 };
 
 
@@ -304,20 +318,20 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 	int timeout=0;
 	char *preferred_image_types;
 	struct pdo_data_src_parser vars[] = {
-		{ "host",       "localhost",  0 },
-		{ "port",   		"19812",			0 },
-		{ "dbname",   	"",						0 },
-		{ "charset",  	"UTF-8",	0 },
-		{ "user",  	"",	0 },
-		{ "password",  	"",	0 },
+			{ "host",       "localhost",  0 },
+			{ "port",   		"19812",			0 },
+			{ "dbname",   	"",						0 },
+			{ "charset",  	"UTF-8",	0 },
+			{ "user",  	"",	0 },
+			{ "password",  	"",	0 },
 	};
 	php_pdo_parse_data_source(dbh->data_source, dbh->data_source_len, vars,6);
 /*	printf("Debut du constructeur\n");
 	printf("preferred_image_types:%s\n",INI_STR("pdo_4d.preferred_image_types"));
-*/	
-		
+*/
+
 	H=pecalloc(1, sizeof(pdo_4d_db_handle), dbh->is_persistent);
-	
+
 	H->einfo.errcode = 0;
 	H->einfo.errmsg = NULL;
 	if((H->server=fourd_init())==NULL)
@@ -325,7 +339,7 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 		pdo_4d_error(dbh);
 		//think to code free method
 		dbh->methods = &fourd_methods;
-		return 0;	
+		return 0;
 	}
 	/*set timeout */
 	timeout=INI_INT("pdo_4d.timeout");
@@ -338,7 +352,7 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 	if(preferred_image_types!=NULL && strlen(preferred_image_types)){
 		fourd_set_preferred_image_types(H->server,preferred_image_types);
 	}
-	
+
 	dbh->driver_data = H;
 	H->max_buffer_size = 1024*1024;
 	H->buffered = H->emulate_prepare = 1;	//review this one
@@ -352,9 +366,9 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 		pwd=vars[5].optval;
 	}else{
 		pwd=dbh->password;
-	}	
+	}
 	//parce connection	 attribut
-	host = vars[0].optval;	
+	host = vars[0].optval;
 	if(vars[1].optval) {
 		port = atoi(vars[1].optval);
 	}
@@ -362,31 +376,31 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 	charset = vars[3].optval;
 	H->charset=charset;
 	//connection
-	if (fourd_connect(H->server, host, user, pwd, dbname, port)) 
+	if (fourd_connect(H->server, host, user, pwd, dbname, port))
 	{
 		pdo_4d_error(dbh);
 		dbh->methods = &fourd_methods;
 		return 0;
 	}
-	
 
-	
+
+
 	H->attached = 1;
 
 	dbh->alloc_own_columns = 1;
 	dbh->max_escaped_char_length = 2;
-	
-	
+
+
 	dbh->methods = &fourd_methods;
-	
+
 	return 1;
 }
 
 
 
 pdo_driver_t pdo_4d_driver = {
-	PDO_DRIVER_HEADER(4D),
-	pdo_4d_handle_factory
+		PDO_DRIVER_HEADER(4D),
+		pdo_4d_handle_factory
 };
 
 //#endif /* HAVE_PDO_4D */
