@@ -56,7 +56,7 @@ int dblogin(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd
 int dblogout(FOURD *cnx,unsigned short int id_cmd);
 int quit(FOURD *cnx,unsigned short int id_cmd);
 //return 0 for OK et -1 for no readable header and error_code
-int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type, int res_size);
+int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type);
 int __fetch_result(FOURD *cnx,unsigned short int id_cmd,int statement_id,int command_index,unsigned int first_row,unsigned int last_row,FOURD_RESULT *result);
 int _fetch_result(FOURD_RESULT *res,unsigned short int id_cmd);
 int get(const char* msg,const char* section,char *valeur,int max_length);
@@ -71,7 +71,7 @@ void _clear_atrr_cnx(FOURD *cnx);
 int close_statement(FOURD_RESULT *res,unsigned short int id_cmd);
 
 int _prepare_statement(FOURD *cnx,unsigned short int id_cmd,const char *request);
-int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type, int res_size);
+int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type);
 int _is_multi_query(const char *request);
 int _valid_query(FOURD *cnx,const char *request);
 /*********************/

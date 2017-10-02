@@ -321,7 +321,7 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 			{ "host",       "localhost",  0 },
 			{ "port",   		"19812",			0 },
 			{ "dbname",   	"",						0 },
-			{ "charset",  	"UTF-8",	0 },
+			{ "charset",  	"UTF-16LE",	0 },
 			{ "user",  	"",	0 },
 			{ "password",  	"",	0 },
 	};

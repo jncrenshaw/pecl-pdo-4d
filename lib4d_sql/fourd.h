@@ -57,9 +57,9 @@ typedef struct in_addr IN_ADDR;
 #define VERBOSE 0
 
 
-/* taille maximal de 2K pour les envoi de requÍte  */
+/* taille maximal de 2K pour les envoi de requï¿½te  */
 /* #define BUFFER_LENGTH 131072 */
-/* taille maximal de 128K pour les rÈponse */
+/* taille maximal de 128K pour les rï¿½ponse */
 #define BUFFER_LENGTH 131072
 #define ERROR_STRING_LENGTH 2048
 
@@ -140,7 +140,7 @@ typedef double FOURD_REAL;
 typedef struct{int exp;unsigned char sign;int data_length;void* data;}FOURD_FLOAT;
 typedef struct{short year;unsigned char mounth;unsigned char day;unsigned int milli;}FOURD_TIMESTAMP;
 typedef long long FOURD_DURATION;//in milliseconds
-typedef struct{int length;unsigned char *data;}FOURD_STRING;
+typedef struct{int length;char *data;}FOURD_STRING;
 typedef struct{int length;void *data;}FOURD_BLOB;
 /* typedef       struct{}FOURD_IMAGE; */
 
@@ -283,7 +283,7 @@ int fourd_field_to_string(FOURD_RESULT *res,unsigned int numCol,char **value,siz
 
 FOURD_STATEMENT * fourd_prepare_statement(FOURD *cnx,const char *query);
 int fourd_bind_param(FOURD_STATEMENT *state,unsigned int numParam,FOURD_TYPE type, void *val);
-FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state, int res_size);
+FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state);
 
 void fourd_set_preferred_image_types(FOURD* cnx,const char *types);
 void fourd_set_statement_preferred_image_types(FOURD_STATEMENT *state,const char *types);

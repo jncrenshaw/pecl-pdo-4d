@@ -136,7 +136,7 @@ const char * fourd_error(FOURD *cnx)
 }
 int fourd_exec(FOURD *cnx,const char *query)
 {
-	return _query(cnx,3,query,NULL,cnx->preferred_image_types,100);
+	return _query(cnx,3,query,NULL,cnx->preferred_image_types);
 }
 FOURD_RESULT* fourd_query(FOURD *cnx,const char *query)
 {
@@ -144,7 +144,8 @@ FOURD_RESULT* fourd_query(FOURD *cnx,const char *query)
 	
 	result=calloc(1,sizeof(FOURD_RESULT));
 	result->cnx=cnx;
-	if(_query(cnx,3,query,result,cnx->preferred_image_types,100)==0)
+
+    if(_query(cnx,3,query,result,cnx->preferred_image_types)==0)
 	{
 		result->numRow=-1;
 		return result;
@@ -430,21 +431,22 @@ int fourd_bind_param(FOURD_STATEMENT *state,unsigned int numParam,FOURD_TYPE typ
 	}
 	return 0;
 }
-FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state, int res_size)
+
+FOURD_RESULT *fourd_exec_statement(FOURD_STATEMENT *state)
 {
-	FOURD_RESULT *result=NULL;
-	result=calloc(1,sizeof(FOURD_RESULT));
-	result->cnx=state->cnx;
-	if(_query_param(state->cnx,6,state->query,state->nb_element,state->elmt,result,state->preferred_image_types,res_size)==0)
-	{
-		result->numRow=-1;
-		return result;
-	}
-	else
-	{
-		fourd_free_result(result);
-		return NULL;
-	}
+    FOURD_RESULT *result=NULL;
+    result=calloc(1,sizeof(FOURD_RESULT));
+    result->cnx=state->cnx;
+    if(_query_param(state->cnx,6,state->query,state->nb_element,state->elmt,result,state->preferred_image_types)==0)
+    {
+        result->numRow=-1;
+        return result;
+    }
+    else
+    {
+        fourd_free_result(result);
+        return NULL;
+    }
 }
 void fourd_set_preferred_image_types(FOURD* cnx,const char *types)
 {

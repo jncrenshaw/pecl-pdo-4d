@@ -108,67 +108,58 @@ int dblogin(FOURD *cnx,unsigned short int id_cnx,const char *user,const char*pwd
 	return 0;
 }
 //return 0 if ok 1 if error
-int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type, int res_size)
+int _query(FOURD *cnx,unsigned short int id_cmd,const char *request,FOURD_RESULT *result,const char*image_type)
 {
-	char *msg;
-	FOURD_RESULT *res;
-	unsigned char *request_b64;
-	int len;
-	Printf("---Debut de _query\n");
-	_clear_atrr_cnx(cnx);
-	if(!_valid_query(cnx,request)) {
-		return 1;
-	}
-	if(result!=NULL)
-		res=result;
-	else
-		res=calloc(1,sizeof(FOURD_RESULT));
+    char msg[MAX_HEADER_SIZE];
+    FOURD_RESULT *res;
+    char *request_b64;
+    int len;
+    Printf("---Debut de _query\n");
+    _clear_atrr_cnx(cnx);
+    if(!_valid_query(cnx,request)) {
+        return 1;
+    }
+    if(result!=NULL)
+        res=result;
+    else
+        res=calloc(1,sizeof(FOURD_RESULT));
 #if __STATEMENT_BASE64__
-	request_b64=base64_encode(request,strlen(request),&len);
-	char *format_str="%03d EXECUTE-STATEMENT\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n";
-	size_t buff_size=strlen(format_str)+strlen((const char *)request_b64)+256; //add a lot extra for the additional arguments and a bit more for good measure.
-	msg=(char *)malloc(buff_size);
-	snprintf(msg,buff_size,format_str,id_cmd,request_b64,"release",res_size,image_type);
-	free(request_b64);
+    request_b64=base64_encode(request,strlen(request),&len);
+    sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type);
+    free(request_b64);
 #else
-	char *format_str="%03d EXECUTE-STATEMENT\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n";
-	size_t buff_size=strlen(format_str)+strlen(request)+256; //add a lot extra for the additional arguments and a bit more for good measure.
-	msg=(char *)malloc(buff_size);
-	snprintf(msg, buff_size,format_str,id_cmd,request,"release",res_size,image_type);
+    sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\n\r\n",id_cmd,request,"release",image_type);
 #endif
+    cnx->updated_row=-1;
+    socket_send(cnx,msg);
+    if(receiv_check(cnx,res)!=0)
+        return 1;
 
-	cnx->updated_row=-1;
-	socket_send(cnx,msg);
-	free(msg);
-	
-	if(receiv_check(cnx,res)!=0)
-		return 1;
-
-	switch(res->resultType)	{
-	case UPDATE_COUNT:
-		//get Update-count: Nb row updated
-		cnx->updated_row=-1;
-		socket_receiv_update_count(cnx,res);		
-		_free_data_result(res);
-		break;
-	case RESULT_SET:
-		//get data
-		socket_receiv_data(cnx,res);
-		cnx->updated_row=-1;
-		if(result==NULL) {
-			_free_data_result(res);
-		}
-		break;
-	default:
-		Printferr("Error: Result-Type not supported in query");
-	}
-	//if(traite_header_reponse(cnx)!=0)
-	//	return 1;
-	if(result==NULL) {
-		Free(res);
-	}
-	Printf("---Fin de _query\n");
-	return 0;
+    switch(res->resultType)	{
+        case UPDATE_COUNT:
+            //get Update-count: Nb row updated
+            cnx->updated_row=-1;
+            socket_receiv_update_count(cnx,res);
+            _free_data_result(res);
+            break;
+        case RESULT_SET:
+            //get data
+            socket_receiv_data(cnx,res);
+            cnx->updated_row=-1;
+            if(result==NULL) {
+                _free_data_result(res);
+            }
+            break;
+        default:
+            Printferr("Error: Result-Type not supported in query");
+    }
+    //if(traite_header_reponse(cnx)!=0)
+    //	return 1;
+    if(result==NULL) {
+        Free(res);
+    }
+    Printf("---Fin de _query\n");
+    return 0;
 }
 
 int _prepare_statement(FOURD *cnx,unsigned short int id_cmd,const char *request){
@@ -218,98 +209,86 @@ int _prepare_statement(FOURD *cnx,unsigned short int id_cmd,const char *request)
 	return 0;
 }
 
-int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type,int res_size)
+int _query_param(FOURD *cnx,unsigned short int id_cmd, const char *request,unsigned int nbParam, const FOURD_ELEMENT *param,FOURD_RESULT *result,const char*image_type)
 {
-	char *msg=NULL;
-	FOURD_RESULT *res;
-	unsigned char *request_b64=NULL;
-	int len;
-	char *sParam=NULL;
-	unsigned int i=0;
-	char *data=NULL;
-	unsigned int data_len=0;
-	unsigned int size=0;
-	//Printf("---Debut de _query_param\n");
-	if(!_valid_query(cnx,request)) {
-		return 1;
-	}
-	if(nbParam<=0)
-		return _query(cnx,id_cmd,request,result,image_type,res_size);
-	_clear_atrr_cnx(cnx);
+    char msg[MAX_HEADER_SIZE];
+    FOURD_RESULT *res;
+    char *request_b64;
+    int len;
+    char sParam[MAX_HEADER_SIZE];
+    unsigned int i=0;
+    char *data=NULL;
+    unsigned int data_len=0;
+    unsigned int size=0;
+    Printf("---Debut de _query_param\n");
+    if(!_valid_query(cnx,request)) {
+        return 1;
+    }
+    if(nbParam<=0)
+        return _query(cnx,id_cmd,request,result,image_type);
+    _clear_atrr_cnx(cnx);
 
-	if(result!=NULL)
-		res=result;
-	else
-		res=calloc(1,sizeof(FOURD_RESULT));
-	
+    if(result!=NULL)
+        res=result;
+    else
+        res=calloc(1,sizeof(FOURD_RESULT));
 
-	/* construct param list */
-	size_t paramlen=(nbParam+1)*13; //the longest type name is 12 characters, and we add a space between each parameter.
-									// add a 1 to the number of parameters because I am paranoid.
-	
-	sParam=calloc(paramlen, sizeof(char)); //initalized to zero, so we should be able to call strlen() on it without problem
-	
-	for(i=0;i<nbParam;i++) {
-		snprintf(sParam+strlen(sParam),paramlen-1-strlen(sParam)," %s",stringFromType(param[i].type));
-		
-		/* construct data */
-		if(param[i].null==0) {
-			data=realloc(data,++size);
-			memset(data+(size-1),'1',1);
-			data=_serialize(data,&size,param[i].type,param[i].pValue);
-		} else {
-			Printf("Serialize a null value\n");
-			data=realloc(data,++size);
-			memset(data+(size-1),'0',1);
-		}
-	}
 
-	data_len=size;
-	/* construct Header */
+    /* construct param list */
+    sprintf_s(sParam,MAX_HEADER_SIZE-1,"");
+    for(i=0;i<nbParam;i++) {
+        sprintf_s(sParam+strlen(sParam),MAX_HEADER_SIZE-1-strlen(sParam)," %s",stringFromType(param[i].type));
+    }
+    /* construct data */
+    for(i=0;i<nbParam;i++) {
+        if(param[i].null==0) {
+            data=realloc(data,++size);
+            memset(data+(size-1),'1',1);
+            data=_serialize(data,&size,param[i].type,param[i].pValue);
+        } else {
+            Printf("Serialize a null value\n");
+            data=realloc(data,++size);
+            memset(data+(size-1),'0',1);
+        }
+    }
+    data_len=size;
+    /* construct Header */
 #if __STATEMENT_BASE64__
-	request_b64=base64_encode(request,strlen(request),&len);
-	char *msg_format="%03d EXECUTE-STATEMENT\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n";
-	size_t msg_length=strlen((const char *)request_b64)+strlen(msg_format)+strlen(image_type)+strlen(sParam)+20;
-	msg=malloc(msg_length);
-	snprintf(msg,msg_length,msg_format,id_cmd,request_b64,"release",res_size,image_type,sParam);
-	free(request_b64);
+    request_b64=base64_encode(request,strlen(request),&len);
+    sprintf_s(msg,MAX_HEADER_SIZE,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT-BASE64:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n",id_cmd,request_b64,"release",image_type,sParam);
+    free(request_b64);
 #else
-	char *msg_format="%03d EXECUTE-STATEMENT\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nFIRST-PAGE-SIZE:%i\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n";
-	size_t msg_length=strlen(request)+strlen(msg_format)+strlen(image_type)+strlen(sParam)+20;
-	msg=malloc(msg_length);
-	snprintf(msg,msg_length,msg_format,id_cmd,request,"release",res_size,image_type,sParam);
+    sprintf_s(msg,MAX_HEADER_SIZE-1,"%03d EXECUTE-STATEMENT\r\nFIRST-PAGE-SIZE:999999\r\nSTATEMENT:%s\r\nOutput-Mode:%s\r\nPREFERRED-IMAGE-TYPES:%s\r\nPARAMETER-TYPES:%s\r\n\r\n",id_cmd,request,"release",image_type,sParam);
 #endif
-	
-	free(sParam);
 
-	socket_send(cnx,msg);
-	free(msg);
-	socket_send_data(cnx,data,data_len);
-	if(receiv_check(cnx,res)!=0)
-		return 1;
 
-	switch(res->resultType)	{
-	case UPDATE_COUNT:
-		//get Update-count: Nb row updated
-		socket_receiv_update_count(cnx,res);		
-		_free_data_result(res);
-		break;
-	case RESULT_SET:
-		//get data
-		socket_receiv_data(cnx,res);
-		cnx->updated_row=-1;
-		if(result==NULL) {
-			_free_data_result(res);
-		}
-		break;
-	default:
-		Printferr("Error: Result-Type not supported in query");
-	}
-	//if(traite_header_reponse(cnx)!=0)
-	//	return 1;
-	if(result==NULL)
-		Free(res);
-	return 0;
+    socket_send(cnx,msg);
+    socket_send_data(cnx,data,data_len);
+    if(receiv_check(cnx,res)!=0)
+        return 1;
+
+    switch(res->resultType)	{
+        case UPDATE_COUNT:
+            //get Update-count: Nb row updated
+            socket_receiv_update_count(cnx,res);
+            _free_data_result(res);
+            break;
+        case RESULT_SET:
+            //get data
+            socket_receiv_data(cnx,res);
+            cnx->updated_row=-1;
+            if(result==NULL) {
+                _free_data_result(res);
+            }
+            break;
+        default:
+            Printferr("Error: Result-Type not supported in query");
+    }
+    //if(traite_header_reponse(cnx)!=0)
+    //	return 1;
+    if(result==NULL)
+        Free(res);
+    return 0;
 }
 
 /* low level commande 
@@ -325,6 +304,7 @@ int __fetch_result(FOURD *cnx,unsigned short int id_cmd,int statement_id,int com
 		return 0;
 	}
 	sprintf_s(msg,2048,"%03d FETCH-RESULT\r\nSTATEMENT-ID:%d\r\nCOMMAND-INDEX:%03d\r\nFIRST-ROW-INDEX:%d\r\nLAST-ROW-INDEX:%d\r\nOutput-Mode:%s\r\n\r\n",id_cmd,statement_id,command_index,first_row,last_row,"release");
+
 	socket_send(cnx,msg);
 	if(receiv_check(cnx,result)!=0)
 		return 1;
