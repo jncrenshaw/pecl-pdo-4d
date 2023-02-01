@@ -118,7 +118,7 @@ static int pdo_4d_stmt_describe(pdo_stmt_t *stmt, int colno)
 	return 1;
 }
 
-static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zend_string *ptr, enum pdo_param_type *type)
+static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_param_type *type)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 
@@ -129,7 +129,9 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zend_string *ptr, en
 		/* error invalid column */
 		return 0;
 	}
-	fourd_field_to_string(S->result,colno, (char **) &Z_STRVAL_P(ptr), &Z_STRLEN_P(ptr));
+	zend_string *str = (zend_string *) zv;
+	char **val_ptr = (char **) &ZSTR_VAL(str);
+	fourd_field_to_string(S->result,colno, val_ptr, &ZSTR_LEN(str));
 
 	switch(fourd_get_column_type(S->result,colno)) {
 		case VK_STRING:
@@ -145,14 +147,13 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zend_string *ptr, en
 			b=fourd_field(S->result,colno);
 			if(b!=NULL){
 			  // Replace string
-			  free(Z_STRVAL_P(ptr));
 			  lptr = (char *) emalloc(b->length+1);
 			  memcpy(lptr,b->data,b->length);
 			  lptr[b->length]='\0';
-			  ZVAL_STRINGL(ptr,lptr,b->length);
+			  zend_string_init(lptr, b->length, 0);
 			}
 			else {
-			  ZVAL_NULL(ptr);
+			  ZVAL_NULL(zv);
 			}
 		}
 			break;
