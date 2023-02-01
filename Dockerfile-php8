@@ -1,0 +1,38 @@
+FROM php:8.2-apache
+
+# Apt installs
+RUN apt-get update
+RUN apt-get install -y libtool
+RUN apt-get install -y imagemagick
+RUN apt-get install -y git
+
+# Install extensions
+RUN docker-php-ext-install opcache
+
+# Clone and build our extension
+RUN mkdir -p /usr/include/php/20220829/ext/pdo_4d
+
+COPY ./lib4d_sql /usr/include/php/20220829/ext/pdo_4d/lib4d_sql
+COPY ./4d_driver.c /usr/include/php/20220829/ext/pdo_4d/4d_driver.c
+COPY ./4d_statement.c /usr/include/php/20220829/ext/pdo_4d/4d_statement.c
+COPY ./config.w32 /usr/include/php/20220829/ext/pdo_4d/config.w32
+COPY ./config.m4 /usr/include/php/20220829/ext/pdo_4d/config.m4
+COPY ./package.xml /usr/include/php/20220829/ext/pdo_4d/package.xml
+COPY ./pdo_4d.c /usr/include/php/20220829/ext/pdo_4d/pdo_4d.c
+COPY ./pdo_4d.dsp /usr/include/php/20220829/ext/pdo_4d/pdo_4d.dsp
+COPY ./pdo_4d_logos.h /usr/include/php/20220829/ext/pdo_4d/pdo_4d_logos.h
+COPY ./php_pdo_4d.h /usr/include/php/20220829/ext/pdo_4d/php_pdo_4d.h
+COPY ./php_pdo_4d_int.h /usr/include/php/20220829/ext/pdo_4d/php_pdo_4d_int.h
+
+WORKDIR /usr/include/php/20220829/ext/pdo_4d
+RUN phpize
+RUN ./configure --with-pdo-4d
+RUN make
+RUN make install -ki
+
+# Activate our extension
+RUN echo "extension=pdo_4d.so" >> "$PHP_INI_DIR/php.ini"
+
+# Print a list of active php modules
+RUN php -m
+
