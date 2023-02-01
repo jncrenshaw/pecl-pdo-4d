@@ -37,8 +37,8 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
-#include "pdo/php_pdo.h"
 #include "pdo/php_pdo_driver.h"
+#include "pdo/php_pdo.h"
 #include "php_pdo_4d.h"
 #include <zend_exceptions.h>
 
@@ -71,8 +71,11 @@ int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line) 
 		pefree(einfo->errmsg, dbh->is_persistent);
 		einfo->errmsg = NULL;
 	}
-	strncpy(*pdo_err, fourd_sqlstate(H->server),5);
-	*pdo_err[5]=0;
+
+	/* Get the first 5 characters of the error msg */
+	strncpy(*pdo_err, fourd_sqlstate(H->server), 5);
+	(*pdo_err)[5] = '\0';
+	
 	/* if error_code is not null => get error message */
 	/* printf("einfo->errcode:%d\n",einfo->errcode); */
 	if (einfo->errcode) {
@@ -90,7 +93,7 @@ int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line) 
 
 	return einfo->errcode;
 }
-static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info)
+static void pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_4d_error_info *einfo = &H->einfo;
@@ -110,10 +113,8 @@ static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info)
 		add_next_index_string(info, einfo->errmsg, 1);
 #endif
 	}
-
-	return 1;
 }
-static int fourd_handle_closer(pdo_dbh_t *dbh ) /* {{{ */
+static void fourd_handle_closer(pdo_dbh_t *dbh ) /* {{{ */
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 
@@ -130,31 +131,29 @@ static int fourd_handle_closer(pdo_dbh_t *dbh ) /* {{{ */
 		pefree(H, dbh->is_persistent);
 		dbh->driver_data = NULL;
 	}
-	return 0;
 }
-static long fourd_handle_doer(pdo_dbh_t *dbh, const char *sql, long sql_len)
+static zend_long fourd_handle_doer(pdo_dbh_t *dbh, const zend_string *sql)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 
-	if (fourd_exec(H->server, sql)) {
+	if (fourd_exec(H->server, sql->val)) {
 		pdo_4d_error(dbh);
 		return -1;
 	} else {
 		FOURD_LONG8 c = fourd_affected_rows(H->server);
 		if (c == (FOURD_LONG8) -1) {
-			pdo_4d_error(dbh);
+			pdo_4d_error(dbh); 
 			return (H->einfo.errcode ? -1 : 0);
 		} else {
 			return c;
 		}
 	}
 }
-static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, pdo_stmt_t *stmt, zval *driver_options)
+static bool fourd_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *stmt, zval *driver_options)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_4d_stmt *S = ecalloc(1, sizeof(pdo_4d_stmt));
 	zend_string *nsql = NULL;
-	long unsigned int nsql_len = 0;
 	int ret;
 	S->H = H;
 	stmt->driver_data = S;
@@ -168,17 +167,16 @@ static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, 
 	/* prepare statement */
 	stmt->supports_placeholders = PDO_PLACEHOLDER_POSITIONAL;
 
-	ret = pdo_parse_params(stmt, (zend_string*)sql, &nsql );
+	ret = pdo_parse_params(stmt, sql, &nsql);
 	if (ret == 1) {
 		/* query was rewritten */
 		sql = nsql;
-		sql_len = nsql_len;
 	} else if (ret == -1) {
 		/* failed to parse */
 		strcpy(dbh->error_code, stmt->error_code);
-		return 0;
+		return false;
 	}
-	if((S->state=fourd_prepare_statement(H->server,sql))==NULL) {
+	if((S->state=fourd_prepare_statement(H->server,sql->val))==NULL) {
 		if (nsql) {
 			efree(nsql);
 		}
@@ -189,41 +187,44 @@ static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, 
 	if (nsql) {
 		efree(nsql);
 	}
-	return 1;
+	return true;
 	/* end of prepare statement */
 	end:
 	stmt->supports_placeholders = PDO_PLACEHOLDER_NONE;
 
-	return 1;
+	return true;
 }
 
-static int pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val )
+static bool pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val )
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	switch (attr) {
 		case PDO_FOURD_ATTR_CHARSET:
 			((pdo_4d_db_handle *)dbh->driver_data)->charset = pestrdup(Z_STRVAL_P(val), dbh->is_persistent);
-			return 1;
+			return true;
 		case PDO_FOURD_ATTR_PREFERRED_IMAGE_TYPES:
 			fourd_set_preferred_image_types(H->server,Z_STRVAL_P(val));
-			return 1;
+			return true;
 		default:
-			return 0;
+			return false;
 	}
 }
-static int fourd_handle_begin(pdo_dbh_t *dbh)
+static bool fourd_handle_begin(pdo_dbh_t *dbh)
 {
-	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("START") );
+  zend_string *str = zend_string_init("BEGIN", sizeof("BEGIN") - 1, 0);
+  return 0 <= fourd_handle_doer(dbh, str);
 }
 
-static int fourd_handle_commit(pdo_dbh_t *dbh)
+static bool fourd_handle_commit(pdo_dbh_t *dbh)
 {
-	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("COMMIT") );
+  zend_string *str = zend_string_init("COMMIT", sizeof("COMMIT") - 1, 0);
+	return 0 <= fourd_handle_doer(dbh, str);
 }
 
-static int fourd_handle_rollback(pdo_dbh_t *dbh )
+static bool fourd_handle_rollback(pdo_dbh_t *dbh )
 {
-	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("ROLLBACK"));
+	zend_string *str = zend_string_init("ROLLBACK", sizeof("ROLLBACK") - 1, 0);
+	return 0 <= fourd_handle_doer(dbh, str);
 }
 
 static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value )
@@ -248,45 +249,54 @@ static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value )
 #endif
 			break;
 		default:
-			return 0;
+			return false;
 	}
 
-	return 1;
+	return true;
 }
-static int fourd_handle_quoter(pdo_dbh_t *dbh, const char *unquoted, int unquotedlen, char **quoted, int *quotedlen, enum pdo_param_type paramtype  ) /* {{{ */
+static zend_string* fourd_handle_quoter(pdo_dbh_t *dbh, const zend_string *unquoted, enum pdo_param_type paramtype  ) /* {{{ */
 {
-	int qcount = 0;
-	char const *cu, *l, *r;
-	char *c;
+  // Declares and initializes our variables
+  int qcount = 0; // Number of quotes in the string
+  char const *cu, *l, *r;
+  char *c;
+  
+  int *unquotedlen = (int*) unquoted->len;
+  
+  zend_string *quoted;
+  int *quotedlen = 0;
 
+  // If the unquoted string is empty, return an empty string
 	if (!unquotedlen) {
-		*quotedlen = 2;
-		*quoted = emalloc(*quotedlen+1);
-		strcpy(*quoted, "''");
-		return 1;
+	  *quotedlen = 2; // We need two characters for the "quoted" empty string
+	  quoted = zend_string_init("", *quotedlen, 0); // Initialize the quoted string
+	  return quoted; // Return the quoted string
 	}
 
 	/* count single quotes */
-	for (cu = unquoted; (cu = strchr(cu,'\'')); qcount++, cu++)
+	for (cu = unquoted->val; (cu = strchr(cu,'\'')); qcount++, cu++)
 		; /* empty loop */
 
-	*quotedlen = unquotedlen + qcount + 2;
-	*quoted = c = emalloc(*quotedlen+1);
-	*c++ = '\'';
+	*quotedlen = *unquotedlen + qcount + 2; // We need a minimum of two additional characters for the "quoted" string
+	quoted = zend_string_init("", *quotedlen, 0); // Initialize the quoted string
+
+	c = quoted->val; // Set c to the beginning of the quoted string
+	*c++ = '\''; // The first character is a single quote
 
 	/* foreach (chunk that ends in a quote) */
-	for (l = unquoted; (r = strchr(l,'\'')); l = r+1) {
-		strncpy(c, l, r-l+1);
-		c += (r-l+1);
+	for (l = unquoted->val; (r = strchr(l,'\'')); l = r+1) {
+	  strncpy(c, l, r-l+1); // Plus one for the quote
+	  c += (r-l+1); // Move c to the end of the chunk
 		*c++ = '\'';			/* add second quote */
 	}
-
+	
 	/* Copy remainder and add enclosing quote */
-	strncpy(c, l, *quotedlen-(c-*quoted)-1);
-	(*quoted)[*quotedlen-1] = '\'';
-	(*quoted)[*quotedlen]   = '\0';
+	strncpy(c, l, c - quoted->val + *quotedlen - 1);
+	// Add the last single quote and the null terminator
+	*(c + *quotedlen-(c-quoted->val)-1) = '\'';
+	*(c + *quotedlen-(c-quoted->val)) = '\0';
 
-	return 1;
+	return quoted;
 }
 /* }}} */
 

@@ -52,7 +52,7 @@ static int pdo_4d_stmt_execute(pdo_stmt_t *stmt)
         S->result = NULL;
     }
     if(S->state==NULL) {	/* if statement has not prepared */
-        if ((S->result=fourd_query(H->server, stmt->active_query_string)) ==NULL) {
+        if ((S->result=fourd_query(H->server, stmt->active_query_string->val)) == NULL) {
             pdo_4d_error_stmt(stmt);
             return 0;
         }
@@ -118,7 +118,7 @@ static int pdo_4d_stmt_describe(pdo_stmt_t *stmt, int colno)
 	return 1;
 }
 
-static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, unsigned long *len, int *caller_frees)
+static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zend_string *ptr, enum pdo_param_type *type)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 
@@ -129,10 +129,9 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, unsigned
 		/* error invalid column */
 		return 0;
 	}
-	fourd_field_to_string(S->result,colno,ptr,len);
+	fourd_field_to_string(S->result,colno, (char **) &Z_STRVAL_P(ptr), &Z_STRLEN_P(ptr));
 
-	switch(fourd_get_column_type(S->result,colno))
-	{
+	switch(fourd_get_column_type(S->result,colno)) {
 		case VK_STRING:
 			/* convert into desired charset */
 			//*ptr=php_mb_convert_encoding(*ptr, *len,S->charset,FOURD_CHARSET_SERVEUR,len );
@@ -145,14 +144,15 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, unsigned
 			FOURD_BLOB *b=NULL;
 			b=fourd_field(S->result,colno);
 			if(b!=NULL){
-				free(*ptr);	/* fourd_get_column_type return "" for blob or image type resource*/
-				*ptr=emalloc(b->length);
-				*len=b->length;
-				memcpy(*ptr,b->data,b->length);
+			  // Replace string
+			  free(Z_STRVAL_P(ptr));
+			  lptr = (char *) emalloc(b->length+1);
+			  memcpy(lptr,b->data,b->length);
+			  lptr[b->length]='\0';
+			  ZVAL_STRINGL(ptr,lptr,b->length);
 			}
 			else {
-				*ptr=NULL;
-				*len=0;
+			  ZVAL_NULL(ptr);
 			}
 		}
 			break;
