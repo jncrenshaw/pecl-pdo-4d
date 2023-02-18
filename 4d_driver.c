@@ -44,7 +44,7 @@
 
 #include "php_pdo_4d_int.h"
 
-int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line) /* {{{ */
+int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line TSRMLS_DC) /* {{{ */
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_error_type *pdo_err;
@@ -87,13 +87,13 @@ int _pdo_4d_error(pdo_dbh_t *dbh, pdo_stmt_t *stmt, const char *file, int line) 
 		return 0;
 	}
 	if (!dbh->methods) {
-		zend_throw_exception_ex(php_pdo_get_exception(), 0 , "SQLSTATE[%s] [%d] %s",
+		zend_throw_exception_ex(php_pdo_get_exception(), 0 TSRMLS_CC, "SQLSTATE[%s] [%d] %s",
 				*pdo_err, einfo->errcode, einfo->errmsg);
 	}
 
 	return einfo->errcode;
 }
-static void pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info)
+static int pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_4d_error_info *einfo = &H->einfo;
@@ -114,7 +114,7 @@ static void pdo_4d_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *info
 #endif
 	}
 }
-static void fourd_handle_closer(pdo_dbh_t *dbh ) /* {{{ */
+static int fourd_handle_closer(pdo_dbh_t *dbh TSRMLS_DC) /* {{{ */
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 
@@ -132,7 +132,7 @@ static void fourd_handle_closer(pdo_dbh_t *dbh ) /* {{{ */
 		dbh->driver_data = NULL;
 	}
 }
-static zend_long fourd_handle_doer(pdo_dbh_t *dbh, const zend_string *sql)
+static long fourd_handle_doer(pdo_dbh_t *dbh, const char *sql, long sql_len TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 
@@ -149,11 +149,12 @@ static zend_long fourd_handle_doer(pdo_dbh_t *dbh, const zend_string *sql)
 		}
 	}
 }
-static bool fourd_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *stmt, zval *driver_options)
+static int fourd_handle_preparer(pdo_dbh_t *dbh, const char *sql, long sql_len, pdo_stmt_t *stmt, zval *driver_options TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_4d_stmt *S = ecalloc(1, sizeof(pdo_4d_stmt));
-	zend_string *nsql = NULL;
+	char *nsql = NULL;
+	long unsigned int nsql_len = 0;
 	int ret;
 	S->H = H;
 	stmt->driver_data = S;
@@ -167,7 +168,7 @@ static bool fourd_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *
 	/* prepare statement */
 	stmt->supports_placeholders = PDO_PLACEHOLDER_POSITIONAL;
 
-	ret = pdo_parse_params(stmt, sql, &nsql);
+	ret = pdo_parse_params(stmt, (char*)sql, sql_len, &nsql, &nsql_len TSRMLS_CC);
 	if (ret == 1) {
 		/* query was rewritten */
 		sql = nsql;
@@ -195,7 +196,7 @@ static bool fourd_handle_preparer(pdo_dbh_t *dbh, zend_string *sql, pdo_stmt_t *
 	return true;
 }
 
-static bool pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val )
+static int pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	switch (attr) {
@@ -209,25 +210,22 @@ static bool pdo_4d_set_attribute(pdo_dbh_t *dbh, long attr, zval *val )
 			return false;
 	}
 }
-static bool fourd_handle_begin(pdo_dbh_t *dbh)
+static int fourd_handle_begin(pdo_dbh_t *dbh TSRMLS_DC)
 {
-  zend_string *str = zend_string_init("BEGIN", sizeof("BEGIN") - 1, 0);
-  return 0 <= fourd_handle_doer(dbh, str);
+	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("START") TSRMLS_CC);
 }
 
-static bool fourd_handle_commit(pdo_dbh_t *dbh)
+static int fourd_handle_commit(pdo_dbh_t *dbh TSRMLS_DC)
 {
-  zend_string *str = zend_string_init("COMMIT", sizeof("COMMIT") - 1, 0);
-	return 0 <= fourd_handle_doer(dbh, str);
+	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("COMMIT") TSRMLS_CC);
 }
 
-static bool fourd_handle_rollback(pdo_dbh_t *dbh )
+static int fourd_handle_rollback(pdo_dbh_t *dbh TSRMLS_DC)
 {
-	zend_string *str = zend_string_init("ROLLBACK", sizeof("ROLLBACK") - 1, 0);
-	return 0 <= fourd_handle_doer(dbh, str);
+	return 0 <= fourd_handle_doer(dbh, ZEND_STRL("ROLLBACK") TSRMLS_CC);
 }
 
-static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value )
+static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value TSRMLS_DC)
 {
 	pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 
@@ -254,7 +252,7 @@ static int pdo_4d_get_attribute(pdo_dbh_t *dbh, long attr, zval *return_value )
 
 	return true;
 }
-static zend_string* fourd_handle_quoter(pdo_dbh_t *dbh, const zend_string *unquoted, enum pdo_param_type paramtype  ) /* {{{ */
+static int fourd_handle_quoter(pdo_dbh_t *dbh, const char *unquoted, int unquotedlen, char **quoted, int *quotedlen, enum pdo_param_type paramtype  TSRMLS_DC) /* {{{ */
 {
   // Declares and initializes our variables
   int qcount = 0; // Number of quotes in the string
@@ -316,7 +314,7 @@ static struct pdo_dbh_methods fourd_methods = {
 };
 
 
-static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options)
+static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS_DC)
 {
 	pdo_4d_db_handle *H;
 	char *host = NULL;

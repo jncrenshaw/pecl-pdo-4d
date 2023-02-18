@@ -40,7 +40,7 @@
 #include "php_pdo_4d_int.h"
 
 
-static int pdo_4d_stmt_execute(pdo_stmt_t *stmt)
+static int pdo_4d_stmt_execute(pdo_stmt_t *stmt TSRMLS_DC)
 {
     pdo_4d_stmt *S;
     pdo_4d_db_handle *H;
@@ -75,7 +75,7 @@ static int pdo_4d_stmt_execute(pdo_stmt_t *stmt)
     return 1;
 }
 
-static int pdo_4d_stmt_describe(pdo_stmt_t *stmt, int colno)
+static int pdo_4d_stmt_describe(pdo_stmt_t *stmt, int colno TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 	struct pdo_column_data *cols = stmt->columns;
@@ -111,14 +111,14 @@ static int pdo_4d_stmt_describe(pdo_stmt_t *stmt, int colno)
 		cols[i].namelen = namelen;
 		cols[i].name = estrndup(name, namelen);
 #endif
-        //cols[i].param_type = PDO_PARAM_STR;
+        cols[i].param_type = PDO_PARAM_STR;
         //cols[i].param_type = PDO_PARAM_STR;
 		//if(i==1) cols[i].param_type = PDO_PARAM_LOB;
 	}
 	return 1;
 }
 
-static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_param_type *type)
+static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, char **ptr, unsigned long *len, int *caller_frees TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 
@@ -136,7 +136,7 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_p
 	switch(fourd_get_column_type(S->result,colno)) {
 		case VK_STRING:
 			/* convert into desired charset */
-			//*ptr=php_mb_convert_encoding(*ptr, *len,S->charset,FOURD_CHARSET_SERVEUR,len );
+			//*ptr=php_mb_convert_encoding(*ptr, *len,S->charset,FOURD_CHARSET_SERVEUR,len TSRMLS_CC);
 			break;
 		case VK_BLOB:
 		case VK_IMAGE:
@@ -159,13 +159,13 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_p
 			break;
 		default:
 			/* convert into desired charset from "ISO-8859-1" for not VK_STRING,VK_BLOB or VK_IMAGE data */
-			//*ptr=php_mb_convert_encoding(*ptr, *len,S->charset,"ISO-8859-1",len );
+			//*ptr=php_mb_convert_encoding(*ptr, *len,S->charset,"ISO-8859-1",len TSRMLS_CC);
 			break;
 	}
 
 	return 1;
 }
-static int pdo_4d_stmt_fetch(pdo_stmt_t *stmt, enum pdo_fetch_orientation ori, long offset)
+static int pdo_4d_stmt_fetch(pdo_stmt_t *stmt, enum pdo_fetch_orientation ori, long offset TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
     size_t len;
@@ -186,7 +186,7 @@ static int pdo_4d_stmt_fetch(pdo_stmt_t *stmt, enum pdo_fetch_orientation ori, l
 	//S->current_lengths = fourd_fetch_lengths(S->result);
 	return 1;
 }
-static int pdo_4d_stmt_set_attribute(pdo_stmt_t *stmt, long attr, zval *val)
+static int pdo_4d_stmt_set_attribute(pdo_stmt_t *stmt, long attr, zval *val TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 	pdo_4d_db_handle *H = S->H;
@@ -198,7 +198,7 @@ static int pdo_4d_stmt_set_attribute(pdo_stmt_t *stmt, long attr, zval *val)
 			return 0;
 	}
 }
-static int pdo_4d_stmt_get_attribute(pdo_stmt_t *stmt, long attr, zval *return_value)
+static int pdo_4d_stmt_get_attribute(pdo_stmt_t *stmt, long attr, zval *return_value TSRMLS_DC)
 {
 	//pdo_4d_db_handle *H = (pdo_4d_db_handle *)dbh->driver_data;
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
@@ -218,7 +218,7 @@ static int pdo_4d_stmt_get_attribute(pdo_stmt_t *stmt, long attr, zval *return_v
 
 	return 1;
 }
-static int pdo_4d_stmt_col_meta(pdo_stmt_t *stmt, long colno, zval *return_value)
+static int pdo_4d_stmt_col_meta(pdo_stmt_t *stmt, long colno, zval *return_value TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 	//MYSQL_FIELD *F;
@@ -275,7 +275,7 @@ static int pdo_4d_stmt_col_meta(pdo_stmt_t *stmt, long colno, zval *return_value
 
 	return SUCCESS;
 }
-static int pdo_4d_stmt_cursor_closer(pdo_stmt_t *stmt )
+static int pdo_4d_stmt_cursor_closer(pdo_stmt_t *stmt TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 
@@ -286,7 +286,7 @@ static int pdo_4d_stmt_cursor_closer(pdo_stmt_t *stmt )
 	}
 	return 1;
 }
-static int pdo_4d_stmt_dtor(pdo_stmt_t *stmt )
+static int pdo_4d_stmt_dtor(pdo_stmt_t *stmt TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 
@@ -304,7 +304,7 @@ static int pdo_4d_stmt_dtor(pdo_stmt_t *stmt )
 	return 1;
 }
 static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *param,
-								  enum pdo_param_event event_type )
+								  enum pdo_param_event event_type TSRMLS_DC)
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
 	if(S->state == NULL) { /* it's not a prepared statement */
@@ -323,7 +323,7 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 						param->paramno = atoi(nameptr + 1) - 1;
 					} else {
 						fprintf(stderr,"Error HY093\n");
-						pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name );
+						pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name TSRMLS_CC);
 						return 0;
 					}
 				}
@@ -331,12 +331,12 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 			/*printf("bind param:%d\n",param->paramno);*/
 			if (param->paramno < 0 ) {
 				strcpy(stmt->error_code, "HY093");
-				//pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name );
+				//pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name TSRMLS_CC);
 
 #if PHP_VERSION_ID >= 70000
-				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name->val );
+				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name->val TSRMLS_CC);
 #else
-				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name );
+				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name TSRMLS_CC);
 #endif
 				return 0;
 			}
@@ -348,9 +348,9 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 				strcpy(stmt->error_code, "HY093");
 
 #if PHP_VERSION_ID >= 70000
-				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name->val );
+				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name->val TSRMLS_CC);
 #else
-				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name );
+				pdo_raise_impl_error(stmt->dbh, stmt, "HY093", param->name TSRMLS_CC);
 #endif
 				return 0;
 			}
@@ -395,7 +395,7 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 																					  &Z_STRVAL_P(param->parameter), PHP_STREAM_COPY_ALL, 0);
 #endif
 							} else {
-								pdo_raise_impl_error(stmt->dbh, stmt, "HY105", "Expected a stream resource" );
+								pdo_raise_impl_error(stmt->dbh, stmt, "HY105", "Expected a stream resource" TSRMLS_CC);
 								return 0;
 							}
 							{
@@ -446,16 +446,16 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
 							{
 								FOURD_STRING str;
 								size_t len=0;
-								/*  MBSTRING_API char * php_mb_convert_encoding(char *input, size_t length, char *_to_encoding, char *_from_encodings, size_t *output_len ) */
+								/*  MBSTRING_API char * php_mb_convert_encoding(char *input, size_t length, char *_to_encoding, char *_from_encodings, size_t *output_len TSRMLS_DC) */
 
 #if PHP_VERSION_ID >= 70000
-								//char* val=php_mb_convert_encoding(Z_STRVAL(param->parameter), Z_STRLEN(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len );
+								//char* val=php_mb_convert_encoding(Z_STRVAL(param->parameter), Z_STRLEN(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len TSRMLS_CC);
 
                                 char* val = Z_STRVAL(param->parameter);
                                 len = Z_STRLEN(param->parameter);
 
 #else
-								char* val=php_mb_convert_encoding(Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len );
+								char* val=php_mb_convert_encoding(Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len TSRMLS_CC);
 #endif
 
 								str.length=len/2;
@@ -479,12 +479,12 @@ static int pdo_4d_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data 
                                 val = test_value;
                                 len = Z_STRLEN(param->parameter);
 
-								//val = php_mb_convert_encoding(test_value, test_length,FOURD_CHARSET_SERVEUR,S->charset,&len );
+								//val = php_mb_convert_encoding(test_value, test_length,FOURD_CHARSET_SERVEUR,S->charset,&len TSRMLS_CC);
 
                                 //PHPWRITE(Z_STRVAL(param->parameter), Z_STRLEN(param->parameter));
 #else
 								convert_to_string(param->parameter);
-								val=php_mb_convert_encoding(Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len );
+								val=php_mb_convert_encoding(Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter),FOURD_CHARSET_SERVEUR,S->charset,&len TSRMLS_CC);
 #endif
 
 								str.length = len/2;
