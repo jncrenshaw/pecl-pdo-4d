@@ -2,7 +2,7 @@ dnl
 dnl $ Id: $
 dnl
 
-PHP_ARG_WITH(pdo-4d, for 4D-SQL support for PDO,
+PHP_ARG_WITH(pdo_4d, for 4D-SQL support for PDO,
 [  --with-pdo-4d         PDO: 4D-SQL support])
 
 if test "$PHP_PDO_4D" != "no"; then
@@ -27,8 +27,8 @@ if test "$PHP_PDO_4D" != "no"; then
     fi
     AC_MSG_RESULT($pdo_inc_path)
   ])
-	PHP_ADD_INCLUDE("$pdo_inc_path/pdo")
   	PHP_ADD_INCLUDE($pdo_inc_path)
+	PHP_ADD_INCLUDE("$pdo_inc_path/pdo")
 	
 	if test "$PHP_PDO_4D" != "yes"; then
 		PDO_4D_DIR=$PHP_PDO_4D
