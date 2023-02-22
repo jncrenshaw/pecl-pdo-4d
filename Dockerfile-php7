@@ -17,8 +17,8 @@ RUN curl -sSL https://github.com/mlocati/docker-php-extension-installer/releases
 
 # Clone and build our extension
 RUN mkdir /root/pdo_4d/
-RUN git clone https://github.com/jasonpjohnson/pecl-pdo-4d.git /root/pdo_4d/pecl-pdo-4d
-WORKDIR /root/pdo_4d/pecl-pdo-4d
+RUN git clone https://github.com/jasonpjohnson/pecl-pdo-4d.git /usr/lib/php/20151012/ext/pdo_4d/
+WORKDIR /usr/lib/php/20151012/ext/pdo_4d/
 RUN phpize
 RUN ./configure --with-pdo-4d
 RUN make

@@ -11,7 +11,6 @@ RUN docker-php-ext-install opcache
 
 # Clone and build our extension
 RUN mkdir -p /usr/include/php/20220829/ext/pdo_4d
-RUN ln -s /usr/local/include/php /usr/include/php/20220829/
 
 COPY ./lib4d_sql /usr/include/php/20220829/ext/pdo_4d/lib4d_sql
 COPY ./4d_driver.c /usr/include/php/20220829/ext/pdo_4d/4d_driver.c
@@ -25,15 +24,20 @@ COPY ./pdo_4d_logos.h /usr/include/php/20220829/ext/pdo_4d/pdo_4d_logos.h
 COPY ./php_pdo_4d.h /usr/include/php/20220829/ext/pdo_4d/php_pdo_4d.h
 COPY ./php_pdo_4d_int.h /usr/include/php/20220829/ext/pdo_4d/php_pdo_4d_int.h
 
+RUN find /usr/include/php/20220829/ext/pdo_4d/lib4d_sql -type f -name "*.lo"
+RUN find /usr/include/php/20220829/ext/pdo_4d/lib4d_sql -type f -name "*.dep"
+
 WORKDIR /usr/include/php/20220829/ext/pdo_4d
+RUN phpize --clean
 RUN phpize
-RUN ./configure --with-pdo-4d
+RUN ./configure --with-pdo_4d
 RUN make
-RUN make install -ki
+RUN make test
+RUN make install
 
 # Activate our extension
 RUN echo "extension=pdo_4d.so" >> "$PHP_INI_DIR/php.ini"
 
 # Print a list of active php modules
-RUN make install test
+RUN php -m
 
