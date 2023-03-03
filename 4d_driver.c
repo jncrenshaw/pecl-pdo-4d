@@ -326,9 +326,6 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options )
 			{ "password",  	"",	0 },
 	};
 	php_pdo_parse_data_source(dbh->data_source, dbh->data_source_len, vars,6);
-/*	printf("Debut du constructeur\n");
-	printf("preferred_image_types:%s\n",INI_STR("pdo_4d.preferred_image_types"));
-*/
 
 	H=pecalloc(1, sizeof(pdo_4d_db_handle), dbh->is_persistent);
 
@@ -376,21 +373,18 @@ static int pdo_4d_handle_factory(pdo_dbh_t *dbh, zval *driver_options )
 	charset = vars[3].optval;
 	H->charset=charset;
 	//connection
-	if (fourd_connect(H->server, host, user, pwd, dbname, port))
+	if (fourd_connect(H->server, host, user, pwd, dbname, port)) // Returns 1 for an error
 	{
 		pdo_4d_error(dbh);
 		dbh->methods = &fourd_methods;
 		return 0;
 	}
 
-
-
 	H->attached = 1;
 
 	dbh->alloc_own_columns = 1;
 	dbh->max_escaped_char_length = 2;
-
-
+	
 	dbh->methods = &fourd_methods;
 
 	return 1;

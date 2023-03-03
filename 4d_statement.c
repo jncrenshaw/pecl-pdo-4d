@@ -130,9 +130,9 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_p
 		/* error invalid column */
 		return 0;
 	}
-	zend_string *str = zend_string_alloc(stmt->columns[colno].maxlen, 0);
-	char **val_ptr = (char **) &ZSTR_VAL(str);
-	fourd_field_to_string(S->result, colno, val_ptr, &ZSTR_LEN(str));
+	char *val_ptr = NULL;
+	unsigned long len = 0;
+	fourd_field_to_string(S->result, colno, &val_ptr, &len);
 
 	switch(fourd_get_column_type(S->result,colno)) {
 		case VK_STRING:
@@ -149,6 +149,7 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_p
 			  memcpy(lptr,b->data,b->length);
 			  lptr[b->length]='\0';
 			  zend_string_init(lptr, b->length, 0);
+			  ZVAL_STRINGL(zv, lptr, b->length);
 			}
 			else {
 			  ZVAL_NULL(zv);
@@ -158,16 +159,14 @@ static int pdo_4d_stmt_get_col(pdo_stmt_t *stmt, int colno, zval *zv, enum pdo_p
 	default:
 	  break;
 	}
-	ZVAL_STR(zv, str);	
-
+	
+	ZVAL_STRINGL(zv, val_ptr, len);
 	return 1;
 }
 static int pdo_4d_stmt_fetch(pdo_stmt_t *stmt, enum pdo_fetch_orientation ori, long offset )
 {
 	pdo_4d_stmt *S = (pdo_4d_stmt*)stmt->driver_data;
     size_t len;
-
-    //char* test = php_mb_convert_encoding("TEST", 4, "UTF-8", "UTF-16LE", len);
 
 
     if (!S->result) {
@@ -180,7 +179,6 @@ static int pdo_4d_stmt_fetch(pdo_stmt_t *stmt, enum pdo_fetch_orientation ori, l
 		}
 		return 0;
 	}
-	//S->current_lengths = fourd_fetch_lengths(S->result);
 	return 1;
 }
 static int pdo_4d_stmt_set_attribute(pdo_stmt_t *stmt, long attr, zval *val )
